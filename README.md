@@ -1,124 +1,105 @@
 # Sistem Deteksi Tren & Anomali Pajak
 
-Aplikasi berbasis Flask + PostgreSQL untuk mendeteksi tren, anomali, dan kepatuhan pajak dari data laporan bulanan usaha.
-
-
-## Fitur Utama
-
-* Upload data Excel pajak bulanan
-* Deteksi otomatis tren & anomali
-* Dashboard interaktif (grafik + tabel)
-* Riwayat upload data
+Aplikasi berbasis Flask + PostgreSQL digunakan untuk menganalisis tren pajak daerah dengan fitur unggah data, visualisasi hasil deteksi, serta riwayat pemrosesan.
 
 ---
 
-## Struktur Folder
+## Fitur Utama
+- Upload file Excel untuk analisis data.
+- Deteksi tren pajak berdasarkan input data.
+- Riwayat pemrosesan data tersimpan di database.
+- Tampilan hasil analisis interaktif (copy, print, filter).
 
+---
+
+## Struktur Proyek
 ```
-SISTEM/
-│
-├── app.py            # Main Flask app
-├── config.py         # Konfigurasi tambahan processing data
-├── db.py             # Fungsi database
-├── db_setup.py       # Setup database instansi
-├── requirement.txt   # Dependency Python
-│
-├── static/           # File CSS
-    ├── base.html       
-├── templates/        # Template HTML
+
+.
+├── app.py              # Main aplikasi Flask
+├── config.py           # Konfigurasi umum
+├── db.py               # Koneksi database & query
+├── db\_setup.py         # Script setup awal database
+├── requirements.txt    # Daftar dependency Python
+├── static/             # File statis (CSS, gambar, dll.)
+├── templates/          # Template HTML (Flask Jinja2)
 │   ├── base.html
 │   ├── result.html
 │   ├── riwayat.html
 │   └── upload.html
-│
-└── __pycache__/      # Cache Python
-```
+└── README.md
+
+````
 
 ---
 
-## Instalasi
+## Konfigurasi Database
 
-1. **Clone repository**
-   ```bash
-   git clone https://github.com/username/sistem-deteksi-pajak.git
-   cd sistem-deteksi-pajak
+Sistem ini menggunakan PostgreSQL sebagai basis data.
+
+1. Pastikan PostgreSQL sudah terpasang di server.
+2. Buat database baru, misalnya dengan nama `tren_pajak`.
+3. Sesuaikan parameter koneksi database pada file berikut:
+   - `db.py` → ubah bagian `DB_PARAMS`
+   - atau jalankan `db_setup.py` untuk membuat tabel `riwayat` secara otomatis.
+
+Contoh konfigurasi (`db.py`):
+
+```python
+DB_PARAMS = {
+    'dbname': 'tren_pajak',
+    'user': 'postgres',
+    'password': 'password_anda',
+    'host': 'localhost',
+    'port': '5432'
+}
 ````
 
-2. **Buat & aktifkan virtual environment** (opsional tapi disarankan)
+> ⚠️ **Catatan:** Pastikan mengganti `user`, `password`, `host`, dan `port` sesuai dengan server database instansi.
+
+---
+
+## Cara Menjalankan Aplikasi
+
+1. Clone repository ini:
+
+   ```bash
+   git clone https://github.com/itsraa17/Sistem-analisis-tren-pajak.git
+   cd Sistem-analisis-tren-pajak
+   ```
+
+2. Buat dan aktifkan virtual environment (opsional):
 
    ```bash
    python -m venv venv
+   venv\Scripts\activate   # Windows
    source venv/bin/activate   # Linux/Mac
-   venv\Scripts\activate      # Windows
    ```
 
-3. **Install dependency**
+3. Install dependency:
 
    ```bash
-   pip install -r requirement.txt
+   pip install -r requirements.txt
    ```
 
----
-
-##  Setup Database
-
-1. **Buat database baru di PostgreSQL**
-   Masuk ke PostgreSQL lalu jalankan:
-
-   ```sql
-   CREATE DATABASE tren_pajak;
-   ```
-
-2. **Edit file `db_setup.py`** → sesuaikan dengan kredensial PostgreSQL instansi:
-
-   ```python
-   DB_PARAMS = {
-       'dbname': 'tren_pajak',
-       'user': 'postgres',
-       'password': 'password_anda',
-       'host': 'localhost',
-       'port': '5432'
-   }
-   ```
-
-3. **Jalankan script setup** untuk membuat tabel `riwayat`
-
-   ```bash
-   python db_setup.py
-   ```
-
-4. **Cek tabel di PostgreSQL**
-
-   ```sql
-   \dt
-   ```
-
-Jika tabel `riwayat` sudah muncul, database siap digunakan.
-
----
-
-## Menjalankan Aplikasi
-
-1. Jalankan Flask:
+4. Jalankan aplikasi:
 
    ```bash
    python app.py
    ```
 
-2. Buka aplikasi di browser:
-   [http://localhost:5000](http://localhost:5000)
+5. Akses aplikasi di browser melalui:
 
+   ```
+   http://127.0.0.1:5000
+   ```
+
+---
+
+## Catatan Tambahan
+
+* Semua file hasil analisis akan tersimpan di database dan dapat diakses kembali melalui menu **Riwayat**.
+* Pastikan environment Python ≥ 3.10 dan PostgreSQL sudah berjalan sebelum menjalankan aplikasi.
 
 ---
 
-## Requirement Utama
-
-* Python 3.10+
-* PostgreSQL 13+
-* Paket Python (sudah ada di `requirement.txt`):
-
-  * Flask
-  * pandas
-  * psycopg2
-
----
