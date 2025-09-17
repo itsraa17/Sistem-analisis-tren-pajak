@@ -1,0 +1,758 @@
+<!--result.html-->
+
+{% extends "base.html" %} {% block content %}
+
+<div
+  class="container-result"
+  style="max-width: 95%; margin: 0 auto; padding: 1rem"
+>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-chart-bar me-2"></i>Hasil Deteksi</h4>
+    <a href="/" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i>Kembali
+    </a>
+  </div>
+
+  <!-- Dashboard Section -->
+  {% if dashboard_data %}
+  <div class="dashboard-section mb-4">
+    <!-- Metric Cards -->
+    <div class="row mb-4">
+      <div class="col-md-4 mb-3">
+        <div class="metric-card">
+          <div class="metric-number">{{ dashboard_data.total_usaha }}</div>
+          <div class="metric-label">Total Usaha</div>
+          <!-- Tambahan Total Data -->
+          <div class="metric-sublabel">{{ data|length }} Total Data</div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="metric-card">
+          <div class="metric-number status-normal">
+            {{ dashboard_data.persentase_patuh }}%
+          </div>
+          <div class="metric-label">Persentase Patuh</div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="metric-card">
+          <div class="metric-number anomaly-count">
+            {{ (dashboard_data.status_counts.get('ANOMALI', 0) +
+            dashboard_data.status_counts.get('TIDAK TAAT PAJAK', 0)) }}
+          </div>
+          <div class="metric-label">Jumlah Anomali</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+      <div class="col-lg-6 mb-3">
+        <div class="chart-container">
+          <div class="chart-title">Distribusi Status Pajak</div>
+          <div class="chart-wrapper">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6 mb-3">
+        <div class="chart-container">
+          <div class="chart-title">Trend Omset vs Pajak</div>
+          <div class="chart-wrapper">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Enhanced Filter Controls -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Filter Rentang Bulan -->
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label mb-2 fw-semibold"
+            >Filter Rentang Bulan:</label
+          >
+          <div class="d-flex gap-2 align-items-center">
+            <input
+              type="month"
+              id="min-month"
+              class="form-control form-control-sm"
+              placeholder="Mulai"
+            />
+            <span class="text-muted">s/d</span>
+            <input
+              type="month"
+              id="max-month"
+              class="form-control form-control-sm"
+              placeholder="Sampai"
+            />
+            <button
+              id="clear-month"
+              class="btn btn-sm btn-outline-secondary flex-shrink-0"
+              title="Hapus filter bulan"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Status -->
+        <div class="col-lg-2 col-md-6">
+          <label class="form-label mb-2 fw-semibold">Filter Status:</label>
+          <select id="status-filter" class="form-select form-select-sm">
+            <option value="">Semua Status</option>
+            <option value="VALID">VALID</option>
+            <option value="TIDAK VALID">TIDAK VALID</option>
+          </select>
+        </div>
+
+        <!-- Filter Kondisi -->
+        <div class="col-lg-2 col-md-6">
+          <label class="form-label mb-2 fw-semibold">Filter Kondisi:</label>
+          <select id="kondisi-filter" class="form-select form-select-sm">
+            <option value="">Semua Kondisi</option>
+            <option value="NORMAL">NORMAL</option>
+            <option value="ANOMALI">ANOMALI</option>
+            <option value="TIDAK TAAT PAJAK">TIDAK TAAT PAJAK</option>
+          </select>
+        </div>
+
+        <!-- Pencarian -->
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label mb-2 fw-semibold">Pencarian:</label>
+          <div class="search-container position-relative">
+            <input
+              type="text"
+              id="global-search"
+              class="form-control form-control-sm"
+              placeholder="Cari data..."
+              style="padding-right: 35px"
+            />
+            <button
+              id="clear-search"
+              class="btn-clear-search position-absolute"
+              style="
+                display: none;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                color: #6c757d;
+                cursor: pointer;
+                padding: 4px;
+                font-size: 12px;
+                border-radius: 3px;
+              "
+              title="Hapus pencarian"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Clear All Button -->
+        <div class="col-lg-1 col-md-6 d-flex align-items-end">
+          <button
+            id="clear-all-filters"
+            class="btn btn-outline-secondary"
+            title="Hapus semua filter"
+          >
+            <i class="fas fa-eraser"></i>
+            <span class="d-none d-lg-inline ms-1">Reset</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table
+          id="result-table"
+          class="table table-bordered table-hover small text-center"
+          style="width: 100%"
+        >
+          <thead>
+            <tr>
+              {% for col in columns %} {% if col != 'bulan_iso' %}
+              <th>
+                {{ column_display_mapping.get(col, col.replace('_',' ').upper())
+                }}
+              </th>
+              {% endif %} {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data %}
+            <tr>
+              {% for col in columns %} {% if col == 'bulan' %}
+              <td class="bulan" data-bulan="{{ row.get('bulan_iso','') }}">
+                {{ row.get('bulan','') }}
+              </td>
+              {% elif col == 'kondisi' %} {% set v = row.get(col, '') %}
+              <td
+                class="kondisi"
+                data-kondisi="{{ v }}"
+                style="{{ row.get('kondisi_style', '') }}"
+              >
+                {{ v }}
+              </td>
+              {% elif col == 'status' %} {% set v = row.get(col, '') %}
+              <td class="status" data-status="{{ v }}">{{ v }}</td>
+              {% elif col == 'bulan_iso' %} {# hidden column #} {% else %}
+              <td>{{ row.get(col, '') }}</td>
+              {% endif %} {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mt-3 d-flex justify-content-end gap-2">
+    <button id="copy-btn" class="btn btn-dongker btn-sm">
+      <i class="fas fa-copy me-1"></i>Copy
+    </button>
+    <button id="print-btn" class="btn btn-dongker btn-sm">
+      <i class="fas fa-print me-1"></i>Print
+    </button>
+  </div>
+</div>
+
+<!-- DataTables CSS/JS -->
+<link
+  rel="stylesheet"
+  href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css"
+/>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  // Dashboard data from backend
+  {% if dashboard_data %}
+  const dashboardData = {{ dashboard_data | tojson }};
+  {% endif %}
+
+  // Create status donut chart
+  function createStatusChart() {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    const statusData = dashboardData.status_counts;
+
+    function getColorForStatus(status) {
+    switch(status.toUpperCase()) {
+        case 'NORMAL': return '#28a745';
+        case 'ANOMALI': return '#fd7e14';
+        case 'TIDAK TAAT PAJAK': return '#dc3545';
+        default: return '#6c757d';
+        }
+    }
+
+    const colors = Object.keys(statusData).map(status => getColorForStatus(status));
+
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(statusData),
+        datasets: [{
+          data: Object.values(statusData),
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              usePointStyle: true
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Create trend line chart
+  function createTrendChart() {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const trendData = dashboardData.monthly_trend;
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: trendData.map(d => d.bulan_display || d.bulan),
+        datasets: [{
+          label: 'Omset (Juta)',
+          data: trendData.map(d => d.omset_perbulan / 1000000),
+          borderColor: '#1b2a41',
+          backgroundColor: 'rgba(27, 42, 65, 0.1)',
+          tension: 0.4,
+          fill: true
+        }, {
+          label: 'Pajak (Juta)',
+          data: trendData.map(d => d.jumlah_pajak_dibayar / 1000000),
+          borderColor: '#28a745',
+          backgroundColor: 'rgba(40, 167, 69, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return 'Rp ' + value + 'M';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Enhanced text cleaning function - case insensitive
+  function cleanText(text) {
+    if (!text) return "";
+    return text
+      .toString()
+      .toLowerCase()  // Convert to lowercase for case-insensitive search
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[^\w\s\-\:\/]/gi, "")
+      .replace(/[^\x00-\x7F]+/g, "")
+  }
+
+  $(document).ready(function () {
+    // Initialize DataTable
+    var table = $("#result-table").DataTable({
+      dom: "rtip",
+      pageLength: 15,
+      searching: true,
+      ordering: true,
+      paging: true,
+      search: {
+        smart: false,
+        regex: false,
+        caseInsensitive: true,
+      },
+      searchDelay: 300,
+      buttons: [
+        {
+          extend: "copy",
+          text: '<i class="fas fa-copy"></i> Copy',
+          className: "btn-dongker btn-sm",
+        },
+        {
+          extend: "print",
+          text: '<i class="fas fa-print"></i> Print',
+          className: "btn-dongker btn-sm",
+          action: function (e, dt, button, config) {
+            var filteredData = table
+              .rows({ search: "applied" })
+              .data()
+              .toArray();
+            var columnHeaders = table.columns().header().toArray();
+
+            // Build table HTML dengan semua data yang difilter
+            var tableHTML =
+              '<table class="print-table" style="border-collapse: collapse; width: 100%; margin-top: 20px;">';
+
+            // Header
+            tableHTML += "<thead><tr>";
+            $(columnHeaders).each(function (index, header) {
+              var columnName = $(header).text();
+              if (columnName !== "Bulan iso") {
+                // Skip hidden column
+                tableHTML +=
+                  '<th style="border: 1px solid black; padding: 8px; text-align: center; background-color: #1b2a41; color: white; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">' +
+                  columnName +
+                  "</th>";
+              }
+            });
+            tableHTML += "</tr></thead>";
+
+            // Body
+            tableHTML += "<tbody>";
+            for (var i = 0; i < filteredData.length; i++) {
+              var row = filteredData[i];
+              tableHTML += "<tr>";
+
+              for (var j = 0; j < row.length; j++) {
+                var columnIndex = j;
+                var columnName = $(columnHeaders[columnIndex]).text();
+
+                if (columnName === "Bulan iso") {
+                  continue;
+                }
+
+                var cellData = row[j] || "";
+                var cellStyle =
+                  "border: 1px solid black; padding: 8px; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;";
+
+                // Apply kondisi styling
+                if (columnName === "Kondisi") {
+                  if (cellData === "NORMAL") {
+                    cellStyle +=
+                      "background-color: lightgreen !important; color: black !important; font-weight: bold !important;";
+                  } else if (cellData === "ANOMALI") {
+                    cellStyle +=
+                      "background-color: orange !important; color: black !important; font-weight: bold !important;";
+                  } else if (cellData === "TIDAK TAAT PAJAK") {
+                    cellStyle +=
+                      "background-color: red !important; color: white !important; font-weight: bold !important;";
+                  }
+                }
+
+                tableHTML +=
+                  '<td style="' + cellStyle + '">' + cellData + "</td>";
+              }
+              tableHTML += "</tr>";
+            }
+            tableHTML += "</tbody></table>";
+
+            var printWindow = window.open("", "_blank");
+            printWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Hasil Deteksi Anomali Pajak</title>
+                <style>
+                  @media print {
+                    * {
+                      print-color-adjust: exact !important;
+                      -webkit-print-color-adjust: exact !important;
+                      color-adjust: exact !important;
+                    }
+                  }
+                  body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    print-color-adjust: exact !important;
+                    -webkit-print-color-adjust: exact !important;
+                  }
+                  .print-table {
+                    border-collapse: collapse !important;
+                    width: 100% !important;
+                    margin-top: 20px;
+                  }
+                  .print-table th, .print-table td {
+                    border: 1px solid black !important;
+                    padding: 8px !important;
+                    text-align: center !important;
+                    print-color-adjust: exact !important;
+                    -webkit-print-color-adjust: exact !important;
+                  }
+                  .print-table th {
+                    background-color: #1b2a41 !important;
+                    color: white !important;
+                    font-weight: bold !important;
+                    print-color-adjust: exact !important;
+                    -webkit-print-color-adjust: exact !important;
+                  }
+                  .print-title {
+                    text-align: center;
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-bottom: 20px;
+                  }
+                  .print-date {
+                    text-align: right;
+                    font-size: 12px;
+                    margin-bottom: 10px;
+                  }
+                  .print-info {
+                    text-align: left;
+                    font-size: 12px;
+                    margin-bottom: 10px;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="print-title">Hasil Deteksi Anomali Pajak</div>
+                <div class="print-date">Tanggal Cetak: ${new Date().toLocaleDateString(
+                  "id-ID"
+                )}</div>
+                <div class="print-info">Total Data: ${
+                  filteredData.length
+                } baris</div>
+                ${tableHTML}
+              </body>
+              </html>
+            `);
+
+            printWindow.document.close();
+            printWindow.focus();
+
+            setTimeout(function () {
+              printWindow.print();
+              printWindow.close();
+            }, 500);
+          },
+        },
+      ],
+      columnDefs: [{ targets: "_all", className: "dt-center" }],
+    });
+
+    // Enhanced global search function - case insensitive
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+      // Only apply to this specific table
+      if (settings.nTable !== $("#result-table")[0]) return true;
+
+      var searchTerm = $("#global-search").val();
+      if (!searchTerm) return true;
+
+      // Clean search term - convert to lowercase
+      var cleanSearchTerm = cleanText(searchTerm);
+      if (!cleanSearchTerm) return true;
+
+      // Check each column for the search term
+      for (var i = 0; i < data.length; i++) {
+        var cellData = cleanText(data[i]);
+
+        // Direct substring match (case insensitive)
+        if (cellData.indexOf(cleanSearchTerm) !== -1) {
+          return true;
+        }
+
+        // Word-by-word search for better partial matching
+        var searchWords = cleanSearchTerm.split(" ").filter(word => word.length > 0);
+        var cellWords = cellData.split(" ").filter(word => word.length > 0);
+
+        var matchCount = 0;
+        for (var j = 0; j < searchWords.length; j++) {
+          var searchWord = searchWords[j];
+          for (var k = 0; k < cellWords.length; k++) {
+            var cellWord = cellWords[k];
+            // Check if search word is contained in cell word or vice versa
+            if (cellWord.indexOf(searchWord) !== -1 || searchWord.indexOf(cellWord) !== -1) {
+              matchCount++;
+              break;
+            }
+          }
+        }
+
+        // If all search words found matches in this cell, return true
+        if (matchCount === searchWords.length) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    // Month range filter - FIXED VERSION
+    $.fn.dataTable.ext.search.push(function (settings, rowData, index) {
+      if (settings.nTable !== $("#result-table")[0]) return true;
+
+      var min = $("#min-month").val();
+      var max = $("#max-month").val();
+
+      if (!min && !max) return true;
+
+      var rowNode = table.row(index).node();
+      var bulan_iso = $(rowNode).find("td.bulan").data("bulan") || "";
+      var bulan_display = $(rowNode).find("td.bulan").text().trim() || "";
+
+      console.log('DEBUG Filter:', {
+        min: min,
+        max: max,
+        bulan_iso: bulan_iso,
+        bulan_display: bulan_display
+      });
+
+      // Try to get comparable date format
+      var comparableDate = "";
+
+      // Priority 1: Use bulan_iso if available and valid
+      if (bulan_iso && bulan_iso !== "" && bulan_iso !== "None" && bulan_iso !== "null") {
+        comparableDate = bulan_iso;
+      }
+      // Priority 2: Convert bulan_display to ISO format
+      else if (bulan_display && bulan_display !== "" && bulan_display !== "-") {
+        var monthMapping = {
+          'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
+          'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
+          'september': '09', 'oktober': '10', 'november': '11', 'desember': '12',
+          'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05',
+          'jun': '06', 'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10',
+          'nov': '11', 'dec': '12'
+        };
+
+        var monthLower = bulan_display.toLowerCase();
+        var monthNum = monthMapping[monthLower];
+
+        if (monthNum) {
+          comparableDate = "2025-" + monthNum; // Default tahun 2025
+        }
+      }
+
+      if (!comparableDate) {
+        console.log('DEBUG: No valid date found, skipping filter');
+        return true; // If no valid date, don't filter out
+      }
+
+      console.log('DEBUG: Comparable date:', comparableDate);
+
+      // Compare with min/max
+      if (min && comparableDate < min) {
+        console.log('DEBUG: Filtered out - before min');
+        return false;
+      }
+      if (max && comparableDate > max) {
+        console.log('DEBUG: Filtered out - after max');
+        return false;
+      }
+
+      console.log('DEBUG: Passed filter');
+      return true;
+    });
+
+    // Enhanced event handlers with debugging
+    $("#min-month, #max-month").on("change", function () {
+      console.log('Month filter changed:', {
+        min: $("#min-month").val(),
+        max: $("#max-month").val()
+      });
+      table.draw();
+    });
+
+    $("#clear-month").on("click", function () {
+      console.log('Clearing month filters');
+      $("#min-month").val("");
+      $("#max-month").val("");
+      table.draw();
+    });
+
+    // Status filter
+    $.fn.dataTable.ext.search.push(function (settings, rowData, index) {
+      if (settings.nTable !== $("#result-table")[0]) return true;
+
+      var selectedStatus = $("#status-filter").val();
+      if (!selectedStatus) return true;
+
+      var rowNode = table.row(index).node();
+      var rowStatus = $(rowNode).find("td.status").data("status") || $(rowNode).find("td.status").text().trim();
+
+      return rowStatus === selectedStatus;
+    });
+
+    // Kondisi filter
+    $.fn.dataTable.ext.search.push(function (settings, rowData, index) {
+      if (settings.nTable !== $("#result-table")[0]) return true;
+
+      var selectedKondisi = $("#kondisi-filter").val();
+      if (!selectedKondisi) return true;
+
+      var rowNode = table.row(index).node();
+      var rowKondisi = $(rowNode).find("td.kondisi").data("kondisi") || $(rowNode).find("td.kondisi").text().trim();
+
+      return rowKondisi === selectedKondisi;
+    });
+
+    // Event handlers
+    $("#global-search").on("keyup change input", function () {
+      var searchValue = $(this).val();
+
+      // Show/hide clear button
+      if (searchValue.length > 0) {
+        $("#clear-search").show();
+      } else {
+        $("#clear-search").hide();
+      }
+
+      table.draw();
+    });
+
+    $("#clear-search").on("click", function () {
+      $("#global-search").val("");
+      $("#clear-search").hide();
+      table.draw();
+    });
+
+    $("#min-month, #max-month").on("change", function () {
+      table.draw();
+    });
+
+    $("#clear-month").on("click", function () {
+      $("#min-month").val("");
+      $("#max-month").val("");
+      table.draw();
+    });
+
+    $("#status-filter").on("change", function () {
+      table.draw();
+    });
+
+    $("#kondisi-filter").on("change", function () {
+      table.draw();
+    });
+
+    // Clear all filters
+    $("#clear-all-filters").on("click", function () {
+      $("#global-search").val("");
+      $("#clear-search").hide();
+      $("#min-month").val("");
+      $("#max-month").val("");
+      $("#status-filter").val("");
+      $("#kondisi-filter").val("");
+      table.draw();
+    });
+
+    // Custom buttons
+    $("#copy-btn").on("click", function () {
+      table.button(".buttons-copy").trigger();
+    });
+
+    $("#print-btn").on("click", function () {
+      table.button(".buttons-print").trigger();
+    });
+
+    // Enter key handler for search
+    $("#global-search").on("keypress", function (e) {
+      if (e.which == 13) {
+        table.draw();
+      }
+    });
+
+    // Initialize dashboard charts
+    {% if dashboard_data %}
+    if (typeof dashboardData !== 'undefined' && document.getElementById('statusChart')) {
+      setTimeout(function() {
+        createStatusChart();
+        createTrendChart();
+      }, 100);
+    }
+    {% endif %}
+  });
+</script>
+
+{% endblock %}

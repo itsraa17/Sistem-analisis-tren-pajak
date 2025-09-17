@@ -1,0 +1,108 @@
+<!--uppload.html-->
+
+{% extends "base.html" %} {% set centered = true %} {% block content %}
+<div class="container-upload">
+  <div class="card upload-card shadow">
+    <div class="card-body">
+      <h4 class="card-title text-center mb-4">
+        <i class="fas fa-file-upload me-2 text-primary"></i>Upload Data Pajak
+      </h4>
+      <form method="POST" enctype="multipart/form-data">
+        <div class="mb-4">
+          <div
+            class="file-upload-area border border-2 border-dashed rounded p-4 text-center position-relative"
+          >
+            <input
+              type="file"
+              class="form-control position-absolute w-100 h-100 opacity-0"
+              id="file"
+              name="file"
+              accept=".csv,.xlsx,.xls"
+              required
+              style="cursor: pointer; z-index: 2"
+            />
+            <div class="upload-placeholder">
+              <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
+              <p class="mb-1 fw-semibold">
+                Drag & drop file here or click to browse
+              </p>
+              <small class="text-muted">CSV or Excel files only</small>
+            </div>
+          </div>
+        </div>
+        {% if error %}
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+        </div>
+        {% endif %}
+        <button
+          type="submit"
+          class="btn w-100 py-2"
+          style="background-color: #1b2a41; color: white; border: none"
+        >
+          <i class="fas fa-play me-2"></i>Proses
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("file");
+    const uploadArea = document.querySelector(".file-upload-area");
+    const uploadPlaceholder = document.querySelector(".upload-placeholder p");
+
+    // File input change event
+    fileInput.addEventListener("change", function (e) {
+      if (e.target.files.length > 0) {
+        uploadPlaceholder.textContent = `File selected: ${e.target.files[0].name}`;
+        uploadArea.classList.add("border-success");
+      } else {
+        uploadPlaceholder.textContent =
+          "Drag & drop file here or click to browse";
+        uploadArea.classList.remove("border-success");
+      }
+    });
+
+    // Drag and drop events
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, highlight, false);
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+      uploadArea.classList.add("dragover");
+    }
+
+    function unhighlight(e) {
+      uploadArea.classList.remove("dragover");
+    }
+
+    uploadArea.addEventListener("drop", handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+
+      if (files.length > 0) {
+        fileInput.files = files;
+        uploadPlaceholder.textContent = `File selected: ${files[0].name}`;
+        uploadArea.classList.add("border-success");
+      }
+    }
+  });
+</script>
+{% endblock %}

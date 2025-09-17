@@ -1,0 +1,176 @@
+<!--base.html-->
+
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deteksi Anomali Pajak</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Mobile Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle" type="button">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+      <!-- Sidebar -->
+      <nav class="sidebar" id="sidebar">
+        <!-- Logo Section -->
+        <div class="sidebar-logo">
+          <img
+            src="{{ url_for('static', filename='logo bapenda.jpg') }}"
+            alt="Logo Instansi"
+            class="logo-img"
+          />
+          <div class="logo-text">
+            <span class="logo-title">Deteksi Pajak</span>
+          </div>
+        </div>
+
+        <div class="sidebar-nav">
+          <a href="/" class="sidebar-nav-item" id="nav-beranda">
+            <i class="fas fa-home"></i>
+            Beranda
+          </a>
+          <a href="/riwayat" class="sidebar-nav-item" id="nav-riwayat">
+            <i class="fas fa-history"></i>
+            Riwayat
+          </a>
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content" id="mainContent">
+        <div
+          class="content-area {% if centered %}centered{% else %}standard{% endif %}"
+        >
+          {% if not centered %}
+          <div class="container-fluid">
+            {% endif %} {% block content %}{% endblock %} {% if not centered %}
+          </div>
+          {% endif %}
+        </div>
+      </main>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Sidebar functionality - Dijalankan sebelum jQuery content-specific
+      document.addEventListener("DOMContentLoaded", function () {
+        const sidebar = document.getElementById("sidebar");
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const sidebarOverlay = document.getElementById("sidebarOverlay");
+        const mainContent = document.getElementById("mainContent");
+
+        // Set active nav item based on current path
+        const currentPath = window.location.pathname;
+        const navItems = document.querySelectorAll(".sidebar-nav-item");
+
+        navItems.forEach((item) => {
+          item.classList.remove("active");
+          if (
+            item.getAttribute("href") === currentPath ||
+            (currentPath === "/" && item.getAttribute("href") === "/")
+          ) {
+            item.classList.add("active");
+          }
+        });
+
+        // Mobile sidebar toggle
+        function toggleSidebar() {
+          const isMobile = window.innerWidth <= 768;
+
+          if (isMobile) {
+            sidebar.classList.toggle("show");
+            sidebarOverlay.classList.toggle("show");
+            document.body.style.overflow = sidebar.classList.contains("show")
+              ? "hidden"
+              : "";
+          } else {
+            sidebar.classList.toggle("collapsed");
+            mainContent.classList.toggle("sidebar-collapsed");
+          }
+        }
+
+        // Event listeners
+        if (sidebarToggle) {
+          sidebarToggle.addEventListener("click", toggleSidebar);
+        }
+
+        if (sidebarOverlay) {
+          sidebarOverlay.addEventListener("click", function () {
+            sidebar.classList.remove("show");
+            sidebarOverlay.classList.remove("show");
+            document.body.style.overflow = "";
+          });
+        }
+
+        // Handle window resize
+        let resizeTimer;
+        window.addEventListener("resize", function () {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(function () {
+            const isMobile = window.innerWidth <= 768;
+
+            if (!isMobile) {
+              // Desktop mode - reset mobile classes
+              sidebar.classList.remove("show");
+              sidebarOverlay.classList.remove("show");
+              document.body.style.overflow = "";
+
+              // Restore desktop sidebar state if it was collapsed
+              if (sidebar.classList.contains("collapsed")) {
+                mainContent.classList.add("sidebar-collapsed");
+              } else {
+                mainContent.classList.remove("sidebar-collapsed");
+              }
+            } else {
+              // Mobile mode - ensure sidebar is hidden and main content is full width
+              sidebar.classList.remove("collapsed");
+              mainContent.classList.remove("sidebar-collapsed");
+            }
+          }, 250);
+        });
+
+        // Close sidebar when clicking nav links on mobile
+        navItems.forEach((item) => {
+          item.addEventListener("click", function () {
+            if (window.innerWidth <= 768) {
+              sidebar.classList.remove("show");
+              sidebarOverlay.classList.remove("show");
+              document.body.style.overflow = "";
+            }
+          });
+        });
+
+        // ESC key to close sidebar on mobile
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && window.innerWidth <= 768) {
+            sidebar.classList.remove("show");
+            sidebarOverlay.classList.remove("show");
+            document.body.style.overflow = "";
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
