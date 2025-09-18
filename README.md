@@ -37,25 +37,38 @@ Aplikasi berbasis Flask + PostgreSQL digunakan untuk menganalisis tren pajak dae
 
 Sistem ini menggunakan PostgreSQL sebagai basis data.
 
-1. Pastikan PostgreSQL sudah terpasang di server.
-2. Buat database baru, misalnya dengan nama `tren_pajak`.
-3. Sesuaikan parameter koneksi database pada file berikut:
-   - `db.py` → ubah bagian `DB_PARAMS`
-   - atau jalankan `db_setup.py` untuk membuat tabel `riwayat` secara otomatis.
+1. **Pastikan PostgreSQL sudah terpasang di server.**
 
-Contoh konfigurasi (`db.py`):
+2. **Buat database dan user:**
+   ```bash
+   sudo -u postgres psql
+   ```
+   ```sql
+   CREATE DATABASE tren_pajak;
+   CREATE USER admin_pajak WITH PASSWORD 'password_kuat_anda';
+   GRANT ALL PRIVILEGES ON DATABASE tren_pajak TO admin_pajak;
+   \q
+   ```
 
-```python
-DB_PARAMS = {
-    'dbname': 'tren_pajak',
-    'user': 'postgres',
-    'password': 'password_anda',
-    'host': 'localhost',
-    'port': '5432'
-}
-````
+3. **Sesuaikan parameter koneksi di `db.py`:**
+   ```python
+   DB_PARAMS = {
+       'dbname': 'tren_pajak',
+       'user': 'admin_pajak',        # sesuaikan dengan user yang dibuat
+       'password': 'password_kuat_anda', # sesuaikan dengan password
+       'host': 'localhost',
+       'port': '5432'
+   }
+   ```
 
-> ⚠️ **Catatan:** Pastikan mengganti `user`, `password`, `host`, dan `port` sesuai dengan server database instansi.
+4. **Buat tabel database:**
+   ```bash
+   python db_setup.py
+   ```
+
+> ⚠️ **Catatan:**
+* Pastikan PostgreSQL service berjalan dengan `sudo systemctl status postgresql`
+* Pastikan mengganti `user`, `password`, `host`, dan `port` sesuai dengan server database instansi.
 
 ---
 
@@ -82,13 +95,19 @@ DB_PARAMS = {
    pip install -r requirements.txt
    ```
 
-4. Jalankan aplikasi:
+4. Setup database (jalankan sekali saja):
+
+   ```bash
+   python db_setup.py
+   ```
+
+5. Jalankan aplikasi:
 
    ```bash
    python app.py
    ```
 
-5. Akses aplikasi di browser melalui:
+6. Akses aplikasi di browser melalui:
 
    ```
    http://127.0.0.1:5000
